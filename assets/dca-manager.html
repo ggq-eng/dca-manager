@@ -1,0 +1,1222 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>复利定投管理系统 · 智能炒股</title>
+<style>
+:root{
+  --bg:#0d1117; --panel:#161b22; --panel2:#1c2333; --border:#30363d;
+  --text:#e6edf3; --muted:#8b949e; --accent:#58a6ff; --accent2:#1f6feb;
+  --up:#f85149; --down:#3fb950; --warn:#d29922; --gold:#e3b341;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:"Segoe UI","Microsoft YaHei",system-ui,sans-serif;font-size:14px;line-height:1.5}
+.wrap{max-width:1440px;margin:0 auto;padding:16px}
+
+/* ===== 顶栏 ===== */
+header.top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
+  background:linear-gradient(135deg,#16233f 0%,#161b22 60%);border:1px solid var(--border);border-radius:12px;padding:14px 20px;margin-bottom:14px}
+header.top h1{font-size:19px;font-weight:700;letter-spacing:.5px}
+header.top h1 .gold{color:var(--gold)}
+header.top .sub{color:var(--muted);font-size:12px;margin-top:2px}
+.top-right{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.quote-box{display:flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:6px 10px;font-size:13px}
+.quote-box .q-price{font-weight:700;font-size:16px}
+
+/* ===== 摘要卡片 ===== */
+.summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:12px 14px}
+.card .label{color:var(--muted);font-size:12px;margin-bottom:4px}
+.card .value{font-size:19px;font-weight:700;font-variant-numeric:tabular-nums}
+.card .value.sm{font-size:16px}
+.card .hint{color:var(--muted);font-size:11px;margin-top:2px}
+
+/* ===== 布局 ===== */
+main{display:grid;grid-template-columns:330px 1fr;gap:14px;align-items:start}
+@media(max-width:1020px){main{grid-template-columns:1fr}}
+
+/* ===== 面板通用 ===== */
+.panel{background:var(--panel);border:1px solid var(--border);border-radius:10px;margin-bottom:14px;overflow:hidden}
+.panel>summary,.panel .p-head{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;
+  padding:11px 14px;font-weight:600;font-size:14px;user-select:none;background:var(--panel2)}
+.panel>summary::-webkit-details-marker{display:none}
+.panel>summary .chev{color:var(--muted);transition:transform .2s}
+.panel[open]>summary .chev{transform:rotate(90deg)}
+.p-body{padding:12px 14px}
+.p-head .p-tag{font-size:11px;color:var(--accent);background:rgba(88,166,255,.12);padding:2px 8px;border-radius:20px;font-weight:400}
+
+/* ===== 表单 ===== */
+.f-row{margin-bottom:10px}
+.f-row label{display:block;color:var(--muted);font-size:12px;margin-bottom:4px}
+.f-row label .unit{color:#6e7681}
+.inp,.sel{width:100%;background:#0d1117;border:1px solid var(--border);color:var(--text);border-radius:6px;
+  padding:7px 10px;font-size:13px;outline:none;transition:border .15s}
+.inp:focus,.sel:focus{border-color:var(--accent)}
+.inp-num{font-variant-numeric:tabular-nums}
+.f-2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.switch{display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none}
+.switch input{display:none}
+.switch .track{width:38px;height:20px;border-radius:20px;background:#30363d;position:relative;transition:background .2s;flex:none}
+.switch .track::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#8b949e;transition:left .2s}
+.switch input:checked+.track{background:var(--accent2)}
+.switch input:checked+.track::after{left:20px;background:#fff}
+.switch span{font-size:13px;color:var(--text)}
+.rule-note{background:rgba(88,166,255,.08);border-left:3px solid var(--accent);border-radius:4px;padding:8px 10px;font-size:12px;color:#c9d4e5;margin:10px 0}
+.rule-note b{color:var(--accent)}
+.rule-note .r-up{color:var(--up)} .rule-note .r-down{color:var(--down)}
+
+/* ===== 按钮 ===== */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:none;border-radius:8px;
+  padding:9px 16px;font-size:14px;font-weight:600;cursor:pointer;transition:filter .15s,transform .05s}
+.btn:active{transform:scale(.98)}
+.btn-primary{background:var(--accent2);color:#fff;width:100%}
+.btn-primary:hover{filter:brightness(1.15)}
+.btn-ghost{background:var(--panel2);color:var(--text);border:1px solid var(--border)}
+.btn-ghost:hover{border-color:var(--accent)}
+.btn-warn{background:rgba(210,153,34,.15);color:var(--warn);border:1px solid rgba(210,153,34,.4)}
+.btn-sm{padding:5px 10px;font-size:12px;border-radius:6px}
+.btn-row{display:flex;gap:8px}
+
+/* ===== 监控区 ===== */
+.chart-card{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:14px}
+.chart-card h3{font-size:14px;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.chart-card h3 .tip{font-size:11px;color:var(--muted);font-weight:400}
+.chart-svg{width:100%;height:auto;display:block}
+
+.diag-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:14px}
+.diag-item{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:10px 12px;text-align:center}
+.diag-item .d-label{color:var(--muted);font-size:11px}
+.diag-item .d-value{font-size:15px;font-weight:700;margin-top:2px;font-variant-numeric:tabular-nums}
+.badge{display:inline-block;font-size:11px;padding:2px 8px;border-radius:20px;font-weight:600}
+.badge-buy{background:rgba(248,81,73,.15);color:var(--up)}
+.badge-sell{background:rgba(63,185,80,.15);color:var(--down)}
+.badge-pause{background:rgba(210,153,34,.15);color:var(--warn)}
+.badge-warn{background:rgba(210,153,34,.2);color:var(--warn)}
+.badge-ok{background:rgba(63,185,80,.15);color:var(--down)}
+
+/* ===== 表格 ===== */
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th,td{padding:7px 9px;text-align:right;border-bottom:1px solid var(--border);white-space:nowrap;font-variant-numeric:tabular-nums}
+th:first-child,td:first-child{text-align:left}
+th{color:var(--muted);font-weight:600;position:sticky;top:0;background:var(--panel2)}
+tr:hover td{background:rgba(88,166,255,.05)}
+.t-up{color:var(--up)} .t-down{color:var(--down)}
+
+.empty{color:var(--muted);text-align:center;padding:24px;font-size:13px}
+
+/* ===== 其他 ===== */
+.hint{color:var(--muted);font-size:12px}
+.warn-banner{background:rgba(210,153,34,.1);border:1px solid rgba(210,153,34,.35);color:var(--warn);
+  border-radius:8px;padding:8px 12px;font-size:12.5px;margin-bottom:12px}
+.ok-banner{background:rgba(63,185,80,.1);border:1px solid rgba(63,185,80,.3);color:var(--down);border-radius:8px;padding:8px 12px;font-size:12.5px;margin-bottom:12px}
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1f2937;border:1px solid var(--border);
+  color:var(--text);padding:10px 18px;border-radius:8px;font-size:13px;opacity:0;transition:opacity .3s;z-index:99;pointer-events:none}
+#toast.show{opacity:1}
+details.panel{margin-bottom:14px}
+.tag-sim{font-size:11px;color:var(--muted)}
+.tag-sim b{color:var(--gold)}
+
+/* ===== 模拟动画 ===== */
+#simProgress{display:none;margin-bottom:12px;padding:10px 12px;background:var(--panel2);border:1px solid var(--border);border-radius:8px}
+.prog-track{height:6px;border-radius:6px;background:#21262d;overflow:hidden}
+.prog-fill{height:100%;width:0%;border-radius:6px;background:linear-gradient(90deg,var(--accent2),var(--accent));transition:width .12s linear}
+.prog-text{color:var(--muted);font-size:12px;margin-top:6px;font-variant-numeric:tabular-nums}
+.prog-text b{color:var(--accent)}
+@keyframes fadeRow{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+.btn:disabled{opacity:.55;cursor:not-allowed}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- ===== 顶栏 ===== -->
+  <header class="top">
+    <div>
+      <h1>💰 <span class="gold">复利定投管理系统</span></h1>
+      <div class="sub">本金 ¥200,000 · 区间触发 · 止盈止损 · 复利再投入 · 实时监控</div>
+    </div>
+    <div class="top-right">
+      <div class="quote-box">
+        <span style="color:var(--muted)">实时行情</span>
+        <span id="q-name" style="color:var(--muted)">--</span>
+        <span class="q-price" id="q-price">--</span>
+        <span id="q-chg" style="font-size:12px;font-weight:600">--</span>
+        <button class="btn btn-ghost btn-sm" onclick="refreshQuote()">刷新</button>
+      </div>
+      <select class="sel" id="simSpeed" style="width:auto;padding:6px 10px" title="模拟演示速度">
+        <option value="slow">🐢 慢速演示</option>
+        <option value="normal" selected>▶ 正常演示</option>
+        <option value="fast">⚡ 快速演示</option>
+        <option value="instant">⏩ 即时完成</option>
+      </select>
+      <button class="btn btn-primary" id="runBtn" style="width:auto" onclick="runSim()">▶ 运行模拟</button>
+      <button class="btn btn-ghost" onclick="saveConfig()">保存配置</button>
+    </div>
+  </header>
+
+  <!-- ===== 摘要 ===== -->
+  <div class="summary" id="summaryBar">
+    <div class="card"><div class="label">初始本金</div><div class="value" id="m-principal">--</div></div>
+    <div class="card"><div class="label">期末总资产</div><div class="value" id="m-equity">--</div></div>
+    <div class="card"><div class="label">累计盈亏</div><div class="value" id="m-pnl">--</div></div>
+    <div class="card"><div class="label">累计收益率</div><div class="value" id="m-return">--</div></div>
+    <div class="card"><div class="label">年化收益率</div><div class="value" id="m-annual">--</div></div>
+    <div class="card"><div class="label">最大回撤</div><div class="value" id="m-mdd">--</div></div>
+    <div class="card"><div class="label">夏普比率</div><div class="value" id="m-sharpe">--</div></div>
+    <div class="card"><div class="label">胜率 / 平仓次数</div><div class="value sm" id="m-win">--</div></div>
+  </div>
+
+  <main>
+    <!-- ================= 左侧：参数配置 ================= -->
+    <aside>
+      <details class="panel" open>
+        <summary>📋 账户设置<span class="p-tag">本金 · 频率</span><span class="chev">▶</span></summary>
+        <div class="p-body">
+          <div class="f-row"><label>初始本金（¥）</label>
+            <input class="inp inp-num" type="number" id="cfg-principal" min="0" step="1000"></div>
+          <div class="f-row"><label>单期定投金额（¥）</label>
+            <input class="inp inp-num" type="number" id="cfg-periodAmount" min="0" step="100"></div>
+          <div class="f-row"><label>定投频率</label>
+            <select class="sel" id="cfg-frequency">
+              <option value="daily">每日（每个交易日）</option>
+              <option value="weekly" selected>每周（每 5 个交易日）</option>
+              <option value="monthly">每月（每 21 个交易日）</option>
+            </select></div>
+        </div>
+      </details>
+
+      <details class="panel" open>
+        <summary>🎯 标的与触发区间<span class="p-tag">区间定投</span><span class="chev">▶</span></summary>
+        <div class="p-body">
+          <div class="f-2">
+            <div class="f-row"><label>标的名称</label><input class="inp" type="text" id="cfg-name"></div>
+            <div class="f-row"><label>行情代码 <span class="unit">(sh/sz 前缀)</span></label><input class="inp" type="text" id="cfg-code"></div>
+          </div>
+          <div class="f-row"><label>起始价格（¥，模拟用）</label>
+            <input class="inp inp-num" type="number" id="cfg-startPrice" min="0.01" step="0.01"></div>
+          <div class="f-row"><label>区间上限 <span class="unit">价格高于此 → 暂停定投（¥）</span></label>
+            <input class="inp inp-num" type="number" id="cfg-upperPrice" min="0.01" step="0.01"></div>
+          <div class="f-row"><label>区间下限 <span class="unit">价格低于此 → 加码买入（¥）</span></label>
+            <input class="inp inp-num" type="number" id="cfg-lowerPrice" min="0.01" step="0.01"></div>
+          <div class="f-row"><label>低位加码倍数 <span class="unit">（默认 1.5 倍 = 加码 50%）</span></label>
+            <input class="inp inp-num" type="number" id="cfg-multiply" min="1" max="5" step="0.1"></div>
+          <div class="rule-note">
+            📐 触发规则：<br>
+            ▸ 价格 <b class="r-down">&gt; 上限</b> → <b>暂停</b>本期定投（等回调）<br>
+            ▸ 价格 <b>∈ [下限, 上限]</b> → 按单期金额<b>正常买入</b><br>
+            ▸ 价格 <b class="r-up">&lt; 下限</b> → 按单期金额 × 加码倍数<b>加码买入</b>
+          </div>
+        </div>
+      </details>
+
+      <details class="panel" open>
+        <summary>🛡️ 止盈 / 止损 / 复利<span class="p-tag">风控</span><span class="chev">▶</span></summary>
+        <div class="p-body">
+          <div class="f-2">
+            <div class="f-row"><label>固定止盈（%）<span class="unit"> 例: 20</span></label>
+              <input class="inp inp-num" type="number" id="cfg-takeProfitPct" min="0" max="500" step="0.5"></div>
+            <div class="f-row"><label>止损（%）<span class="unit"> 例: 10</span></label>
+              <input class="inp inp-num" type="number" id="cfg-stopLossPct" min="0" max="100" step="0.5"></div>
+          </div>
+          <div class="f-row"><label>止盈时卖出仓位比例 <span class="unit">100% = 全部止盈清仓</span></label>
+            <input class="inp inp-num" type="number" id="cfg-sellRatio" min="0.1" max="1" step="0.05"></div>
+          <div class="f-row" style="margin-top:2px">
+            <label class="switch"><input type="checkbox" id="cfg-trailEnabled"><span class="track"></span><span>启用移动止盈（截取更大利润）</span></label>
+          </div>
+          <div class="f-2">
+            <div class="f-row"><label>移动止盈启动阈值（%）</label>
+              <input class="inp inp-num" type="number" id="cfg-trailTriggerPct" min="0" step="0.5"></div>
+            <div class="f-row"><label>回撤触发（%）</label>
+              <input class="inp inp-num" type="number" id="cfg-trailDrawdownPct" min="0" step="0.5"></div>
+          </div>
+          <div class="rule-note">💡 移动止盈：浮盈 ≥ 启动阈值后进入保护状态，此后若价格自持仓期间最高点回撤 ≥ 触发值，立即止盈卖出。比固定止盈更能让利润奔跑。</div>
+          <div class="f-row" style="margin-top:2px">
+            <label class="switch"><input type="checkbox" id="cfg-reinvest" checked><span class="track"></span><span>复利再投入（止盈/止损回收资金自动滚入资金池，继续参与后续定投）</span></label>
+          </div>
+        </div>
+      </details>
+
+      <details class="panel" open>
+        <summary>🧪 模拟参数<span class="p-tag">回测</span><span class="chev">▶</span></summary>
+        <div class="p-body">
+          <div class="f-2">
+            <div class="f-row"><label>模拟时长（交易日）</label>
+              <input class="inp inp-num" type="number" id="cfg-simDays" min="20" max="3000" step="21"></div>
+            <div class="f-row"><label>随机种子</label>
+              <input class="inp inp-num" type="number" id="cfg-seed" step="1"></div>
+          </div>
+          <div class="f-2">
+            <div class="f-row"><label>年化收益率（%）</label>
+              <input class="inp inp-num" type="number" id="cfg-annualReturn" step="0.5"></div>
+            <div class="f-row"><label>年化波动率（%）</label>
+              <input class="inp inp-num" type="number" id="cfg-annualVol" min="1" step="0.5"></div>
+          </div>
+          <div class="f-row"><label>无风险利率（%，夏普用）</label>
+            <input class="inp inp-num" type="number" id="cfg-riskFreeRate" step="0.1"></div>
+          <div class="tag-sim" style="margin-top:6px">📌 模拟基于<b>几何布朗运动</b>（GBM）随机路径，用于策略回测与风险压力测试；同一种子可复现。真实行情的买卖判定见下方「当前价位诊断」。</div>
+        </div>
+      </details>
+
+      <details class="panel">
+        <summary>🔌 行情接口<span class="p-tag">实时监控</span><span class="chev">▶</span></summary>
+        <div class="p-body">
+          <div class="f-row"><label>腾讯行情直连 <span class="unit">(可能受浏览器跨域限制)</span></label>
+            <input class="inp" type="text" id="cfg-quoteApi" placeholder="https://qt.gtimg.cn/q="></div>
+          <div class="f-row"><label>本地代理 <span class="unit">(推荐: python quote_proxy.py)</span></label>
+            <input class="inp" type="text" id="cfg-proxyApi" placeholder="http://localhost:8000/quote"></div>
+          <div class="rule-note">🌐 若直连被跨域拦截，请运行 <b>quote_proxy.py</b> 启动本地代理，程序会自动回退使用。也可在下方「当前价位诊断」手动输入价格。</div>
+        </div>
+      </details>
+
+      <div class="btn-row" style="margin-bottom:20px">
+        <button class="btn btn-ghost" style="flex:1" onclick="resetConfig()">恢复默认</button>
+        <button class="btn btn-ghost" style="flex:1" onclick="clearSim()">清空结果</button>
+      </div>
+    </aside>
+
+    <!-- ================= 右侧：监控面板 ================= -->
+    <section>
+      <!-- 当前价位诊断 -->
+      <div class="chart-card">
+        <h3>🔎 当前价位诊断 <span class="tip">输入当前价格或点击「用最新行情填充」——实时判断定投档位 / 是否触发止盈止损</span></h3>
+        <div class="btn-row" style="margin-bottom:10px">
+          <input class="inp inp-num" style="max-width:180px" type="number" id="diag-price" placeholder="当前价格" step="0.01">
+          <button class="btn btn-ghost btn-sm" onclick="useQuotePrice()">用最新行情填充</button>
+          <button class="btn btn-primary btn-sm" onclick="diagnose()">诊断</button>
+        </div>
+        <div id="diag-banner" style="margin-bottom:10px"></div>
+        <div class="diag-grid" id="diag-grid" style="margin-bottom:0">
+          <div class="diag-item"><div class="d-label">定投档位</div><div class="d-value" id="d-band">--</div></div>
+          <div class="diag-item"><div class="d-label">持仓浮盈</div><div class="d-value" id="d-flt">--</div></div>
+          <div class="diag-item"><div class="d-label">距止盈线</div><div class="d-value" id="d-tp">--</div></div>
+          <div class="diag-item"><div class="d-label">距止损线</div><div class="d-value" id="d-sl">--</div></div>
+          <div class="diag-item"><div class="d-label">移动止盈状态</div><div class="d-value" id="d-trail">--</div></div>
+          <div class="diag-item"><div class="d-label">建议操作</div><div class="d-value" id="d-act">--</div></div>
+        </div>
+      </div>
+
+      <!-- 资金曲线 -->
+      <div class="chart-card">
+        <h3>📈 资产曲线 <span class="tip">期末总资产 vs 成本线（本金 20 万）</span></h3>
+        <div id="simProgress">
+          <div class="prog-track"><div class="prog-fill" id="progFill"></div></div>
+          <div class="prog-text" id="progText">准备模拟…</div>
+        </div>
+        <svg id="chartEquity" class="chart-svg" viewBox="0 0 900 260"></svg>
+      </div>
+
+      <!-- 价格走势 -->
+      <div class="chart-card">
+        <h3>📊 价格走势与买卖点 <span class="tip">红点=买入(加码更亮) · 绿点=卖出</span></h3>
+        <svg id="chartPrice" class="chart-svg" viewBox="0 0 900 260"></svg>
+      </div>
+
+      <!-- 统计明细 -->
+      <div class="chart-card">
+        <h3>📋 策略统计</h3>
+        <div class="diag-grid" style="margin-bottom:12px">
+          <div class="diag-item"><div class="d-label">定投执行次数</div><div class="d-value" id="s-buys">--</div></div>
+          <div class="diag-item"><div class="d-label">其中加码次数</div><div class="d-value" id="s-mult">--</div></div>
+          <div class="diag-item"><div class="d-label">暂停次数</div><div class="d-value" id="s-skip">--</div></div>
+          <div class="diag-item"><div class="d-label">止盈次数</div><div class="d-value" id="s-tp">--</div></div>
+          <div class="diag-item"><div class="d-label">止损次数</div><div class="d-value" id="s-sl">--</div></div>
+          <div class="diag-item"><div class="d-label">期末持仓市值</div><div class="d-value" id="s-hold">--</div></div>
+          <div class="diag-item"><div class="d-label">期末现金余额</div><div class="d-value" id="s-cash">--</div></div>
+          <div class="diag-item"><div class="d-label">波动率(年化)</div><div class="d-value" id="s-vol">--</div></div>
+        </div>
+      </div>
+
+      <!-- 交易记录 -->
+      <div class="chart-card">
+        <h3 style="justify-content:space-between"><span>🧾 交易记录</span>
+          <button class="btn btn-ghost btn-sm" onclick="exportCSV()">导出 CSV</button></h3>
+        <div class="table-wrap">
+          <table id="tradeTable">
+            <thead><tr><th>#</th><th>类型</th><th>价格(¥)</th><th>金额(¥)</th><th>说明</th></tr></thead>
+            <tbody id="tradeBody"><tr><td colspan="5" class="empty">运行模拟后展示交易明细</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 定投计划预览 -->
+      <div class="chart-card">
+        <h3>🗓️ 定投计划预览 <span class="tip">按当前频率展示未来 12 期触发规则</span></h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>期数</th><th>预计交易日</th><th>价格条件</th><th>投入金额</th></tr></thead>
+            <tbody id="planBody"><tr><td colspan="4" class="empty">保存配置后生成</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div id="toast"></div>
+
+<script>
+"use strict";
+/* =====================================================================
+ * 复利定投管理系统 —— 配置 / 策略引擎 / GBM模拟 / 监控 / 行情
+ * ===================================================================== */
+
+const STORE_KEY = "dca-manager-v1";
+
+/* ---------------- 默认配置（全部可自定义） ---------------- */
+const DEFAULT_CONFIG = {
+  principal: 200000,        // 初始本金 ¥
+  periodAmount: 5000,       // 单期定投金额 ¥
+  frequency: "weekly",      // daily | weekly | monthly
+  name: "浦发银行",
+  code: "sh600000",
+  startPrice: 10.5,         // 模拟起始价格
+  upperPrice: 12.0,         // 区间上限：高于 → 暂停
+  lowerPrice: 8.5,          // 区间下限：低于 → 加码
+  multiply: 1.5,            // 加码倍数
+  takeProfitPct: 20,        // 固定止盈 %
+  stopLossPct: 10,          // 止损 %
+  sellRatio: 1.0,           // 止盈卖出仓位比例
+  trailEnabled: false,      // 移动止盈开关
+  trailTriggerPct: 20,      // 移动止盈启动阈值 %
+  trailDrawdownPct: 8,      // 回撤触发 %
+  reinvest: true,           // 复利再投入
+  simDays: 504,             // 模拟交易日 ≈ 2 年
+  annualReturn: 8,          // 年化收益 %
+  annualVol: 22,            // 年化波动 %
+  seed: 42,                 // 随机种子
+  riskFreeRate: 2,          // 无风险利率 %
+  quoteApi: "https://qt.gtimg.cn/q=",
+  proxyApi: "http://localhost:8000/quote"
+};
+
+/* ---------------- 状态 ---------------- */
+let CFG = null;               // 当前配置
+let RESULT = null;            // 最近一次模拟结果
+let QUOTE = null;             // 最新行情 {name,price,changePct}
+let DIAG = null;              // 最近一次诊断结果
+
+/* ---------------- 工具 ---------------- */
+const $ = id => document.getElementById(id);
+const fmt = (n, d=2) => (n==null||isNaN(n)) ? "--" : n.toLocaleString("zh-CN",{minimumFractionDigits:d,maximumFractionDigits:d});
+const fmtMoney = n => "¥" + fmt(n, 0);
+const fmtPct = n => (n==null||isNaN(n)) ? "--" : (n>=0?"+":"") + (n*100).toFixed(2) + "%";
+function toast(msg){ const t=$("toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove("show"),2600); }
+function saveConfig(){
+  collectConfig();
+  try{ localStorage.setItem(STORE_KEY, JSON.stringify(CFG)); }catch(e){}
+  renderPlan();
+  toast("✅ 配置已保存（本机浏览器 localStorage）");
+}
+function loadConfig(){
+  let saved = null;
+  try{ saved = JSON.parse(localStorage.getItem(STORE_KEY)); }catch(e){}
+  CFG = Object.assign({}, DEFAULT_CONFIG, saved||{});
+}
+function collectConfig(){
+  CFG = {
+    principal: num("cfg-principal"), periodAmount: num("cfg-periodAmount"),
+    frequency: $("cfg-frequency").value,
+    name: $("cfg-name").value.trim() || "标的", code: $("cfg-code").value.trim(),
+    startPrice: num("cfg-startPrice"), upperPrice: num("cfg-upperPrice"),
+    lowerPrice: num("cfg-lowerPrice"), multiply: num("cfg-multiply"),
+    takeProfitPct: num("cfg-takeProfitPct"), stopLossPct: num("cfg-stopLossPct"),
+    sellRatio: num("cfg-sellRatio"),
+    trailEnabled: $("cfg-trailEnabled").checked,
+    trailTriggerPct: num("cfg-trailTriggerPct"), trailDrawdownPct: num("cfg-trailDrawdownPct"),
+    reinvest: $("cfg-reinvest").checked,
+    simDays: num("cfg-simDays"), annualReturn: num("cfg-annualReturn"),
+    annualVol: num("cfg-annualVol"), seed: num("cfg-seed"), riskFreeRate: num("cfg-riskFreeRate"),
+    quoteApi: $("cfg-quoteApi").value.trim(), proxyApi: $("cfg-proxyApi").value.trim()
+  };
+  // 基本校验
+  if(CFG.upperPrice <= CFG.lowerPrice){ toast("⚠️ 区间上限必须大于区间下限"); }
+}
+function num(id){ const v = parseFloat($(id).value); return isNaN(v)?0:v; }
+function fillForm(){
+  $("cfg-principal").value = CFG.principal;
+  $("cfg-periodAmount").value = CFG.periodAmount;
+  $("cfg-frequency").value = CFG.frequency;
+  $("cfg-name").value = CFG.name;
+  $("cfg-code").value = CFG.code;
+  $("cfg-startPrice").value = CFG.startPrice;
+  $("cfg-upperPrice").value = CFG.upperPrice;
+  $("cfg-lowerPrice").value = CFG.lowerPrice;
+  $("cfg-multiply").value = CFG.multiply;
+  $("cfg-takeProfitPct").value = CFG.takeProfitPct;
+  $("cfg-stopLossPct").value = CFG.stopLossPct;
+  $("cfg-sellRatio").value = CFG.sellRatio;
+  $("cfg-trailEnabled").checked = !!CFG.trailEnabled;
+  $("cfg-trailTriggerPct").value = CFG.trailTriggerPct;
+  $("cfg-trailDrawdownPct").value = CFG.trailDrawdownPct;
+  $("cfg-reinvest").checked = !!CFG.reinvest;
+  $("cfg-simDays").value = CFG.simDays;
+  $("cfg-annualReturn").value = CFG.annualReturn;
+  $("cfg-annualVol").value = CFG.annualVol;
+  $("cfg-seed").value = CFG.seed;
+  $("cfg-riskFreeRate").value = CFG.riskFreeRate;
+  $("cfg-quoteApi").value = CFG.quoteApi;
+  $("cfg-proxyApi").value = CFG.proxyApi;
+}
+function resetConfig(){
+  ANIM_TOKEN++;
+  const runBtn = $("runBtn");
+  runBtn.disabled = false;
+  runBtn.textContent = "▶ 运行模拟";
+  $("simProgress").style.display = "none";
+  CFG = Object.assign({}, DEFAULT_CONFIG);
+  fillForm(); renderPlan();
+  toast("已恢复默认配置：本金 ¥200,000 / 周定投 ¥5,000");
+}
+
+/* =====================================================================
+ * 策略引擎
+ * ===================================================================== */
+// 定投调度：daily=每1天, weekly=每5天, monthly=每21天
+const FREQ_STEP = { daily:1, weekly:5, monthly:21 };
+
+function decideBand(price, cfg){
+  if(price > cfg.upperPrice) return "pause";          // 高于上限 → 暂停
+  if(price < cfg.lowerPrice) return "boost";          // 低于下限 → 加码
+  return "normal";                                     // 区间内 → 正常
+}
+function investAmountFor(band, cfg){
+  if(band === "pause") return {amount:0, note:"暂停（价格 > 上限 "+cfg.upperPrice.toFixed(2)+"）"};
+  if(band === "boost") return {amount: cfg.periodAmount*cfg.multiply, note:"加码 ×"+cfg.multiply+"（价格 < 下限 "+cfg.lowerPrice.toFixed(2)+"）"};
+  return {amount: cfg.periodAmount, note:"正常定投（区间内）"};
+}
+
+/**
+ * 核心策略执行器
+ * @param {Object} cfg 配置
+ * @param {number[]} prices 每日价格序列
+ * @returns 结果对象
+ */
+function runStrategy(cfg, prices){
+  const step = FREQ_STEP[cfg.frequency] || 5;
+  let cash = cfg.principal;                 // 资金池（含复利回收）
+  let shares = 0, totalCost = 0;            // 持仓与摊薄成本
+  let realizedProfit = 0;                   // 累计已实现盈亏
+  let highPrice = 0, trailActive = false;   // 移动止盈状态
+  let buys=0, boosts=0, skips=0, tps=0, sls=0;
+  const trades = [];
+  const equity = new Array(prices.length);
+  const buyMarks = new Array(prices.length).fill(null); // 买入标记 {boost}
+  const sellMarks = new Array(prices.length).fill(null);
+
+  for(let t=0; t<prices.length; t++){
+    const price = prices[t];
+    const isPlanDay = (t % step === 0) || (t===0);
+
+    /* ---- 1. 定投触发 ---- */
+    if(isPlanDay){
+      const band = decideBand(price, cfg);
+      if(band === "pause"){ skips++; }
+      else{
+        const {amount, note} = investAmountFor(band, cfg);
+        if(amount>0 && cash >= amount){
+          cash -= amount;
+          shares += amount/price;
+          totalCost += amount;
+          buys++; if(band==="boost") boosts++;
+          trades.push({t, type:"BUY", price, amount, note: note + (cfg.reinvest?" · 资金池":"")});
+          buyMarks[t] = band === "boost" ? 2 : 1;
+        }
+      }
+    }
+
+    /* ---- 2. 止盈 / 止损 ---- */
+    if(shares > 0){
+      const avgCost = totalCost/shares;
+      const pnlPct = (price - avgCost)/avgCost;
+
+      // 移动止盈状态维护
+      if(cfg.trailEnabled){
+        highPrice = Math.max(highPrice, price);
+        if(pnlPct >= cfg.trailTriggerPct/100) trailActive = true;
+      }
+
+      let reason = null;
+      if(cfg.trailEnabled && trailActive){
+        const dd = (highPrice - price)/highPrice;
+        if(dd >= cfg.trailDrawdownPct/100) reason = "移动止盈（自高点回撤 "+(dd*100).toFixed(1)+"% ≥ "+(cfg.trailDrawdownPct)+"%）";
+      }
+      if(!reason && pnlPct >= cfg.takeProfitPct/100){
+        reason = "固定止盈 +"+(pnlPct*100).toFixed(1)+"% ≥ "+cfg.takeProfitPct+"%";
+      }
+      if(!reason && pnlPct <= -(cfg.stopLossPct/100)){
+        reason = "止损 "+(pnlPct*100).toFixed(1)+"% ≤ -"+cfg.stopLossPct+"%";
+      }
+      if(reason){
+        const sellShares = shares * cfg.sellRatio;
+        const sellCost = totalCost * cfg.sellRatio;
+        const proceeds = sellShares * price;
+        const profit = proceeds - sellCost;
+        realizedProfit += profit;
+        cash += proceeds;
+        shares -= sellShares;
+        totalCost -= sellCost;
+        const isTp = reason.indexOf("止盈") >= 0 || reason.indexOf("移动止盈") >= 0;
+        if(isTp) tps++; else sls++;
+        trades.push({t, type:"SELL", price, amount:proceeds, note: reason + (cfg.reinvest?" · 复利回收→资金池":" · 收益提取")});
+        sellMarks[t] = isTp ? 1 : 2;
+        // 半仓止盈后重置移动止盈状态（基于剩余持仓重新计算）
+        if(shares > 0){ highPrice = price; trailActive = false; }
+        else { highPrice = 0; trailActive = false; }
+      }
+    }
+
+    equity[t] = cash + shares*price;
+  }
+
+  /* ---- 3. 指标 ---- */
+  const finalEquity = equity[equity.length-1];
+  const days = prices.length;
+  const totalReturn = finalEquity/cfg.principal - 1;
+  const annualReturn = Math.pow(finalEquity/cfg.principal, 252/days) - 1;
+
+  // 最大回撤 & 当前回撤
+  let peak = -Infinity, mdd = 0, mddEnd = 0, curDD = 0;
+  for(let t=0; t<days; t++){
+    if(equity[t] > peak) peak = equity[t];
+    const dd = (peak - equity[t])/peak;
+    if(dd > mdd){ mdd = dd; mddEnd = t; }
+  }
+  curDD = (peak - finalEquity)/peak;
+
+  // 日收益波动率 → 年化
+  let sum=0, sum2=0;
+  for(let t=1; t<days; t++){
+    const r = Math.log(equity[t]/equity[t-1]);
+    sum += r; sum2 += r*r;
+  }
+  const n = days-1;
+  const vol = n>1 ? Math.sqrt((sum2 - sum*sum/n)/(n-1)) * Math.sqrt(252) : 0;
+  const rf = cfg.riskFreeRate/100;
+  const sharpe = vol>0 ? (annualReturn - rf)/vol : 0;
+
+  const closed = tps + sls;
+  const winRate = closed>0 ? tps/closed : 0;
+  const holdingsValue = shares * prices[prices.length-1];
+
+  return {
+    cfg, prices, trades, equity, buyMarks, sellMarks,
+    cash, shares, totalCost, realizedProfit,
+    finalEquity, totalReturn, annualReturn, mdd, mddEnd, curDD, vol, sharpe,
+    buys, boosts, skips, tps, sls, winRate, closed,
+    holdingsValue, holdingsCost: totalCost
+  };
+}
+
+/* =====================================================================
+ * GBM 价格模拟
+ * ===================================================================== */
+function mulberry32(seed){
+  let a = seed >>> 0;
+  return function(){
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    let t = Math.imul(a ^ a>>>15, 1|a);
+    t = t + Math.imul(t ^ t>>>7, 61|t) ^ t;
+    return ((t ^ t>>>14) >>> 0) / 4294967296;
+  };
+}
+function gbmSim(price0, annReturn, annVol, days, seed){
+  const rnd = mulberry32(seed);
+  const mu = annReturn, sigma = annVol;
+  const dt = 1/252;
+  const prices = new Array(days);
+  prices[0] = price0;
+  let s = price0;
+  for(let i=1; i<days; i++){
+    // Box-Muller
+    let u1 = Math.max(rnd(), 1e-12), u2 = rnd();
+    const z = Math.sqrt(-2*Math.log(u1)) * Math.cos(2*Math.PI*u2);
+    s = s * Math.exp((mu - sigma*sigma/2)*dt + sigma*Math.sqrt(dt)*z);
+    prices[i] = Math.max(s, 0.01);
+  }
+  return prices;
+}
+
+/* =====================================================================
+ * SVG 图表
+ * ===================================================================== */
+function drawLineChart(svgId, series, opts){
+  const svg = $(svgId), ns = "http://www.w3.org/2000/svg";
+  svg.innerHTML = "";
+  const W = 900, H = 260, padL = 52, padR = 12, padT = 14, padB = 28;
+  const iw = W - padL - padR, ih = H - padT - padB;
+  let lo = Infinity, hi = -Infinity;
+  series.forEach(s=>s.data.forEach(v=>{ if(v<lo)lo=v; if(v>hi)hi=v; }));
+  if(hi-lo < 1e-9){ hi = lo+1; lo = lo-1; }
+  const pad = (hi-lo)*0.06; lo-=pad; hi+=pad;
+  const X = i => padL + (iw * i/(Math.max(1,series[0].data.length-1)));
+  const Y = v => padT + ih - (ih * (v-lo)/(hi-lo));
+  const T = (x,y,t,cls) => { const e=document.createElementNS(ns,"text"); e.setAttribute("x",x); e.setAttribute("y",y);
+    e.setAttribute("fill",cls||"#8b949e"); e.setAttribute("font-size","11"); e.setAttribute("text-anchor","end");
+    e.textContent=t; svg.appendChild(e); };
+
+  // 网格 + Y 轴
+  for(let g=0; g<=4; g++){
+    const y = padT + ih*g/4, v = hi - (hi-lo)*g/4;
+    const line=document.createElementNS(ns,"line");
+    line.setAttribute("x1",padL); line.setAttribute("y1",y); line.setAttribute("x2",W-padR); line.setAttribute("y2",y);
+    line.setAttribute("stroke","#21262d"); line.setAttribute("stroke-width","1");
+    svg.appendChild(line);
+    T(padL-8, y+4, v.toFixed(2), "#8b949e");
+  }
+  const nx = Math.min(10, series[0].data.length);
+  for(let g=0; g<nx; g++){
+    const i = Math.round(g*(series[0].data.length-1)/(nx-1));
+    const x = X(i);
+    const line=document.createElementNS(ns,"line");
+    line.setAttribute("x1",x); line.setAttribute("y1",padT); line.setAttribute("x2",x); line.setAttribute("y2",H-padB);
+    line.setAttribute("stroke","#21262d"); line.setAttribute("stroke-width","1"); line.setAttribute("stroke-dasharray","3,4");
+    svg.appendChild(line);
+    T(x, H-10, opts.xLabel ? opts.xLabel(i) : String(i+1), "#8b949e");
+  }
+
+  // 参考线（如成本线）
+  if(opts.hlines) opts.hlines.forEach(h=>{
+    const y = Y(h.value);
+    const line=document.createElementNS(ns,"line");
+    line.setAttribute("x1",padL); line.setAttribute("y1",y); line.setAttribute("x2",W-padR); line.setAttribute("y2",y);
+    line.setAttribute("stroke",h.color||"#d29922"); line.setAttribute("stroke-width","1.2"); line.setAttribute("stroke-dasharray","6,4");
+    svg.appendChild(line);
+    T(padL+4, y-5, h.label||"", h.color||"#d29922");
+  });
+
+  // 面积 + 折线
+  series.forEach((s,i)=>{
+    const pts = s.data.map((v,idx)=>[X(idx), Y(v)]);
+    if(s.fill){
+      const area = document.createElementNS(ns,"polygon");
+      const d = pts.map(p=>p.join(",")).join(" ");
+      area.setAttribute("points", `${padL},${Y(lo)} ${d} ${X(s.data.length-1)},${Y(lo)}`);
+      area.setAttribute("fill", s.fill);
+      svg.appendChild(area);
+    }
+    const poly = document.createElementNS(ns,"polyline");
+    poly.setAttribute("points", pts.map(p=>p.join(",")).join(" "));
+    poly.setAttribute("fill","none");
+    poly.setAttribute("stroke", s.color);
+    poly.setAttribute("stroke-width", s.width||2);
+    poly.setAttribute("stroke-linejoin","round");
+    poly.setAttribute("stroke-linecap","round");
+    svg.appendChild(poly);
+
+    // 末值标签
+    const last = s.data.length-1;
+    T(Math.min(X(last), W-padR-10), Y(s.data[last])-7, opts.lastLabel ? opts.lastLabel(s, s.data[last]) : s.data[last].toFixed(2), s.color);
+
+    // 当前点高亮（动画演示游标）
+    if(opts.cursor){
+      const cx = X(last), cy = Y(s.data[last]);
+      const halo = document.createElementNS(ns,"circle");
+      halo.setAttribute("cx",cx); halo.setAttribute("cy",cy); halo.setAttribute("r",8);
+      halo.setAttribute("fill","none"); halo.setAttribute("stroke",s.color);
+      halo.setAttribute("stroke-width","2"); halo.setAttribute("opacity","0.55");
+      halo.setAttribute("style","animation:pulse 1s ease-in-out infinite");
+      svg.appendChild(halo);
+      const dot = document.createElementNS(ns,"circle");
+      dot.setAttribute("cx",cx); dot.setAttribute("cy",cy); dot.setAttribute("r",3.5);
+      dot.setAttribute("fill",s.color); dot.setAttribute("stroke","#0d1117"); dot.setAttribute("stroke-width","1");
+      svg.appendChild(dot);
+    }
+  });
+
+  // 标记点
+  if(opts.marks) opts.marks.forEach(m=>{
+    m.points.forEach(p=>{
+      const cx = X(p.i), cy = Y(p.v);
+      const c = document.createElementNS(ns,"circle");
+      c.setAttribute("cx",cx); c.setAttribute("cy",cy);
+      c.setAttribute("r", m.kind===2 ? 5.5 : 4);
+      c.setAttribute("fill", m.color);
+      c.setAttribute("opacity", m.kind===2 ? "0.95" : "0.85");
+      c.setAttribute("stroke","#0d1117"); c.setAttribute("stroke-width","1.2");
+      svg.appendChild(c);
+      if(p.i === 0 || p.i === series[0].data.length-1){
+        const ring = document.createElementNS(ns,"circle");
+        ring.setAttribute("cx",cx); ring.setAttribute("cy",cy); ring.setAttribute("r",9);
+        ring.setAttribute("fill","none"); ring.setAttribute("stroke",m.color); ring.setAttribute("opacity","0.35");
+        svg.appendChild(ring);
+      }
+    });
+  });
+
+  // 图例
+  if(opts.legend){
+    let lx = padL, ly = 12;
+    opts.legend.forEach(l=>{
+      const rect=document.createElementNS(ns,"rect");
+      rect.setAttribute("x",lx); rect.setAttribute("y",ly-9); rect.setAttribute("width",12); rect.setAttribute("height",4);
+      rect.setAttribute("fill",l.color); rect.setAttribute("rx",2);
+      svg.appendChild(rect);
+      const t=document.createElementNS(ns,"text");
+      t.setAttribute("x",lx+16); t.setAttribute("y",ly-3); t.setAttribute("fill","#8b949e"); t.setAttribute("font-size","11");
+      t.textContent=l.text; svg.appendChild(t);
+      lx += 16 + t.textContent.length*6.5 + 14;
+    });
+  }
+}
+
+/* =====================================================================
+ * 渲染
+ * ===================================================================== */
+function renderSummary(r){
+  $("m-principal").textContent = fmtMoney(r.cfg.principal);
+  $("m-equity").textContent = fmtMoney(r.finalEquity);
+  const pnl = r.finalEquity - r.cfg.principal;
+  const pnlEl = $("m-pnl");
+  pnlEl.textContent = (pnl>=0?"+":"−") + fmtMoney(Math.abs(pnl));
+  pnlEl.style.color = pnl>=0 ? "var(--up)" : "var(--down)";
+  const retEl = $("m-return");
+  retEl.textContent = fmtPct(r.totalReturn);
+  retEl.style.color = r.totalReturn>=0 ? "var(--up)" : "var(--down)";
+  $("m-annual").textContent = fmtPct(r.annualReturn);
+  $("m-annual").style.color = r.annualReturn>=0 ? "var(--up)" : "var(--down)";
+  const mddEl = $("m-mdd");
+  mddEl.textContent = "-" + (r.mdd*100).toFixed(2) + "%";
+  mddEl.style.color = "var(--warn)";
+  $("m-sharpe").textContent = fmt(r.sharpe);
+  $("m-win").textContent = r.closed>0 ? fmtPct(r.winRate) + " / " + r.closed : "-- / 0";
+  $("s-buys").textContent = r.buys;
+  $("s-mult").textContent = r.boosts;
+  $("s-skip").textContent = r.skips;
+  $("s-tp").textContent = r.tps;
+  $("s-sl").textContent = r.sls;
+  $("s-hold").textContent = fmtMoney(r.holdingsValue);
+  $("s-cash").textContent = fmtMoney(r.cash);
+  $("s-vol").textContent = (r.vol*100).toFixed(1) + "%";
+}
+
+function renderCharts(r){
+  const n = r.prices.length;
+  const xLabel = i => "T+" + i;
+  // 资产曲线
+  drawLineChart("chartEquity", [{data:r.equity, color:"#58a6ff", fill:"rgba(88,166,255,.10)", width:2}], {
+    xLabel,
+    lastLabel:(s,v)=>fmtMoney(v),
+    hlines:[{value:r.cfg.principal, color:"#d29922", label:"成本线 "+fmtMoney(r.cfg.principal)}],
+    cursor:true,
+    legend:[{text:"总资产（现金+持仓市值）", color:"#58a6ff"}]
+  });
+  // 价格 + 买卖点
+  const buyPoints=[], boostPoints=[], tpPoints=[], slPoints=[];
+  r.buyMarks.forEach((m,i)=>{ if(m===1) buyPoints.push({i,v:r.prices[i]}); if(m===2) boostPoints.push({i,v:r.prices[i]}); });
+  r.sellMarks.forEach((m,i)=>{ if(m===1) tpPoints.push({i,v:r.prices[i]}); if(m===2) slPoints.push({i,v:r.prices[i]}); });
+  drawLineChart("chartPrice", [{data:r.prices, color:"#e3b341", width:1.6}], {
+    xLabel,
+    lastLabel:(s,v)=>v.toFixed(2),
+    hlines:[
+      {value:r.cfg.upperPrice, color:"#f85149", label:"上限 "+r.cfg.upperPrice.toFixed(2)},
+      {value:r.cfg.lowerPrice, color:"#3fb950", label:"下限 "+r.cfg.lowerPrice.toFixed(2)}
+    ],
+    marks:[
+      {points:buyPoints, color:"#f85149", kind:1},
+      {points:boostPoints, color:"#ff7b72", kind:2},
+      {points:tpPoints, color:"#3fb950", kind:1},
+      {points:slPoints, color:"#9e6a03", kind:1}
+    ],
+    cursor:true,
+    legend:[
+      {text:"价格", color:"#e3b341"},
+      {text:"买入", color:"#f85149"},
+      {text:"加码买入", color:"#ff7b72"},
+      {text:"止盈卖出", color:"#3fb950"},
+      {text:"止损卖出", color:"#9e6a03"}
+    ]
+  });
+}
+
+function renderTrades(r){
+  const body = $("tradeBody");
+  if(!r.trades.length){ body.innerHTML = '<tr><td colspan="5" class="empty">本期未产生交易（检查区间设置或延长模拟时长）</td></tr>'; return; }
+  body.innerHTML = r.trades.map((tr,i)=>{
+    const isBuy = tr.type==="BUY";
+    const cls = isBuy ? "badge badge-buy" : "badge badge-sell";
+    return `<tr>
+      <td>${i+1}</td>
+      <td><span class="${cls}">${isBuy?"买入":"卖出"}</span></td>
+      <td>${fmt(tr.price)}</td>
+      <td>${fmt(tr.amount,0)}</td>
+      <td style="text-align:left;color:var(--muted)">${tr.note}</td>
+    </tr>`;
+  }).join("");
+}
+
+function renderPlan(){
+  const cfg = CFG || DEFAULT_CONFIG;
+  const step = FREQ_STEP[cfg.frequency] || 5;
+  const rows = [];
+  for(let k=0; k<12; k++){
+    const day = (k+1)*step;
+    let cond, amt;
+    if(cfg.upperPrice <= cfg.lowerPrice){ cond = "参数错误"; amt = "--"; }
+    else {
+      cond = `P &gt; ${cfg.upperPrice.toFixed(2)} → 暂停 | P &lt; ${cfg.lowerPrice.toFixed(2)} → 加码 ×${cfg.multiply}`;
+      amt = `¥${fmt(cfg.periodAmount,0)}（区间内）/ ¥${fmt(cfg.periodAmount*cfg.multiply,0)}（加码）`;
+    }
+    rows.push(`<tr><td>第 ${k+1} 期</td><td>T+${day}（约 ${(day/step*7).toFixed(0)} 天）</td><td style="text-align:left">${cond}</td><td>${amt}</td></tr>`);
+  }
+  $("planBody").innerHTML = rows.join("");
+}
+
+/* =====================================================================
+ * 模拟执行（含逐帧动画演示）
+ * ===================================================================== */
+let ANIM_TOKEN = 0;   // 动画令牌：新模拟 / 清空 / 恢复默认时取消旧动画
+
+// 各速度档：帧数(约) 与 每帧间隔(ms)
+const SPEED_OPTS = {
+  slow:    {frames: 90, ms: 70},   // ≈6.3s
+  normal:  {frames: 60, ms: 60},   // ≈3.6s
+  fast:    {frames: 30, ms: 40},   // ≈1.2s
+  instant: {frames: 1,  ms: 0}
+};
+
+function runSim(){
+  collectConfig();
+  if(CFG.upperPrice <= CFG.lowerPrice){ toast("⚠️ 区间上限必须大于区间下限"); return; }
+  if(CFG.startPrice <= 0){ toast("⚠️ 起始价格需大于 0"); return; }
+  const speed = ($("simSpeed").value in SPEED_OPTS) ? $("simSpeed").value : "normal";
+  // 同步计算完整结果（引擎本身不耗时），渲染阶段做动画
+  const prices = gbmSim(CFG.startPrice, CFG.annualReturn/100, CFG.annualVol/100, CFG.simDays, CFG.seed);
+  RESULT = runStrategy(CFG, prices);
+
+  const token = ++ANIM_TOKEN;
+  const opts = SPEED_OPTS[speed];
+  const total = RESULT.prices.length;
+  const step = Math.max(1, Math.round(total / opts.frames));
+  let t = 0;
+
+  const runBtn = $("runBtn");
+  runBtn.disabled = true;
+  runBtn.textContent = "⏳ 模拟中…";
+
+  if(speed === "instant"){
+    finishSim(RESULT, token);
+    return;
+  }
+
+  $("simProgress").style.display = "block";
+  $("progFill").style.width = "0%";
+  $("progText").innerHTML = "准备模拟…（<b>" + total + "</b> 个交易日）";
+
+  (function frame(){
+    if(token !== ANIM_TOKEN) return;
+    t = Math.min(t + step, total - 1);
+    renderPartial(RESULT, t);
+    if(t >= total - 1) finishSim(RESULT, token);
+    else setTimeout(frame, opts.ms);
+  })();
+}
+
+function finishSim(r, token){
+  if(token !== ANIM_TOKEN) return;
+  const runBtn = $("runBtn");
+  runBtn.disabled = false;
+  runBtn.textContent = "▶ 运行模拟";
+  $("simProgress").style.display = "none";
+  renderSummary(r);
+  renderCharts(r);
+  renderTrades(r);
+  renderPlan();
+  autoDiagnose();
+  toast(`✅ 模拟完成：${r.cfg.simDays} 个交易日 · ${r.buys} 次买入 · ${r.tps} 次止盈 / ${r.sls} 次止损`);
+}
+
+/* —— 动画中间帧渲染：图表、摘要、交易记录随进度推进 —— */
+function countBuysUpTo(r, t){
+  let c = 0; for(let i=0; i<=t; i++) if(r.buyMarks[i]) c++;
+  return c;
+}
+function countMarksUpTo(r, t, arr, val){
+  let c = 0; for(let i=0; i<=t; i++) if(arr[i] === val) c++;
+  return c;
+}
+
+function renderPartial(r, t){
+  const px = r.prices.slice(0, t+1);
+  const eq = r.equity.slice(0, t+1);
+
+  // 资产曲线（当前点脉冲）
+  drawLineChart("chartEquity", [{data:eq, color:"#58a6ff", fill:"rgba(88,166,255,.10)", width:2}], {
+    xLabel: i => "T+" + i,
+    lastLabel: (s,v) => fmtMoney(v),
+    hlines: [{value:r.cfg.principal, color:"#d29922", label:"成本线"}],
+    cursor: true
+  });
+
+  // 价格走势 + 截至 t 的买卖点
+  const buyP=[], boostP=[], tpP=[], slP=[];
+  for(let i=0; i<=t; i++){
+    if(r.buyMarks[i] === 1) buyP.push({i, v:px[i]});
+    if(r.buyMarks[i] === 2) boostP.push({i, v:px[i]});
+    if(r.sellMarks[i] === 1) tpP.push({i, v:px[i]});
+    if(r.sellMarks[i] === 2) slP.push({i, v:px[i]});
+  }
+  drawLineChart("chartPrice", [{data:px, color:"#e3b341", width:1.6}], {
+    xLabel: i => "T+" + i,
+    lastLabel: (s,v) => v.toFixed(2),
+    hlines: [
+      {value:r.cfg.upperPrice, color:"#f85149", label:"上限 "+r.cfg.upperPrice.toFixed(2)},
+      {value:r.cfg.lowerPrice, color:"#3fb950", label:"下限 "+r.cfg.lowerPrice.toFixed(2)}
+    ],
+    marks: [
+      {points:buyP, color:"#f85149", kind:1},
+      {points:boostP, color:"#ff7b72", kind:2},
+      {points:tpP, color:"#3fb950", kind:1},
+      {points:slP, color:"#9e6a03", kind:1}
+    ],
+    cursor: true
+  });
+
+  // 摘要卡实时滚动
+  const p = r.cfg.principal, cur = r.equity[t];
+  $("m-equity").textContent = fmtMoney(cur);
+  const pnl = cur - p;
+  $("m-pnl").textContent = (pnl>=0?"+":"−") + fmtMoney(Math.abs(pnl));
+  $("m-pnl").style.color = pnl>=0 ? "var(--up)" : "var(--down)";
+  const ret = cur/p - 1;
+  $("m-return").textContent = fmtPct(ret);
+  $("m-return").style.color = ret>=0 ? "var(--up)" : "var(--down)";
+  if(t > 0){
+    $("m-annual").textContent = fmtPct(Math.pow(cur/p, 252/(t+1)) - 1);
+  }
+  let peak = -Infinity, mdd = 0;
+  for(let i=0; i<=t; i++){
+    if(r.equity[i] > peak) peak = r.equity[i];
+    const dd = (peak - r.equity[i])/peak;
+    if(dd > mdd) mdd = dd;
+  }
+  $("m-mdd").textContent = "-" + (mdd*100).toFixed(2) + "%";
+  $("m-mdd").style.color = "var(--warn)";
+
+  // 策略统计实时滚动
+  $("s-buys").textContent = countBuysUpTo(r, t);
+  $("s-tp").textContent = countMarksUpTo(r, t, r.sellMarks, 1);
+  $("s-sl").textContent = countMarksUpTo(r, t, r.sellMarks, 2);
+
+  // 交易记录增量（最新一笔高亮）
+  renderTradesPartial(r, t);
+
+  // 进度条
+  const len = r.prices.length;
+  $("progFill").style.width = ((t+1)/len*100).toFixed(1) + "%";
+  $("progText").innerHTML = "模拟中… <b>T+" + t + "</b> / " + (len-1)
+    + " · 买入 <b>" + countBuysUpTo(r, t) + "</b> 次"
+    + " · 止盈 <b>" + countMarksUpTo(r, t, r.sellMarks, 1) + "</b> / 止损 <b>"
+    + countMarksUpTo(r, t, r.sellMarks, 2) + "</b>";
+}
+
+function renderTradesPartial(r, t){
+  const body = $("tradeBody");
+  const visible = r.trades.filter(tr => tr.t <= t);
+  if(!visible.length){
+    body.innerHTML = '<tr><td colspan="5" class="empty">模拟进行中，尚无成交…</td></tr>';
+    return;
+  }
+  const lastT = visible[visible.length-1].t;
+  body.innerHTML = visible.map((tr,i)=>{
+    const isBuy = tr.type === "BUY";
+    const cls = isBuy ? "badge badge-buy" : "badge badge-sell";
+    const flash = tr.t === lastT ? ' style="animation:fadeRow .5s ease"' : "";
+    return `<tr${flash}>
+      <td>${i+1}</td>
+      <td><span class="${cls}">${isBuy?"买入":"卖出"}</span></td>
+      <td>${fmt(tr.price)}</td>
+      <td>${fmt(tr.amount,0)}</td>
+      <td style="text-align:left;color:var(--muted)">${tr.note}</td>
+    </tr>`;
+  }).join("");
+}
+
+function clearSim(){
+  ANIM_TOKEN++;                 // 取消进行中的动画
+  const runBtn = $("runBtn");
+  runBtn.disabled = false;
+  runBtn.textContent = "▶ 运行模拟";
+  $("simProgress").style.display = "none";
+  RESULT = null;
+  ["chartEquity","chartPrice"].forEach(id=>$(id).innerHTML="");
+  $("summaryBar").querySelectorAll(".value").forEach(e=>e.textContent="--");
+  ["m-pnl","m-return","m-annual","m-mdd"].forEach(id=>{$(id).style.color="";});
+  ["s-buys","s-mult","s-skip","s-tp","s-sl","s-hold","s-cash","s-vol"].forEach(id=>$(id).textContent="--");
+  $("tradeBody").innerHTML = '<tr><td colspan="5" class="empty">运行模拟后展示交易明细</td></tr>';
+  clearDiagnose();
+  toast("已清空模拟结果");
+}
+
+/* =====================================================================
+ * 当前价位诊断（实时监控核心）
+ * ===================================================================== */
+function getLastHolding(){
+  if(RESULT && RESULT.shares>0) return {shares:RESULT.shares, cost:RESULT.totalCost, prices:RESULT.prices};
+  // 无模拟结果时：按最近一次买入假设（单期本金）给出简化诊断
+  return null;
+}
+function diagnose(){
+  const price = parseFloat($("diag-price").value);
+  if(!price || price<=0){ toast("请输入有效价格"); return; }
+  const cfg = CFG || DEFAULT_CONFIG;
+  const band = decideBand(price, cfg);
+  const bandMap = {pause:["暂停区间","价格高于上限，等待回调",'badge-warn'],
+                   boost:["加码区间","低于下限，可加大买入金额",'badge-buy'],
+                   normal:["正常区间","价格处于定投区间内，按计划买入",'badge-ok']};
+  const b = bandMap[band];
+
+  // 持仓浮盈（用模拟结果或单期假设）
+  let flt=null, tpDist=null, slDist=null, trailState="未启用", act=b[1];
+  if(cfg.trailEnabled) trailState = "已启用";
+  const hold = getLastHolding();
+  if(hold){
+    const avg = hold.cost/hold.shares;
+    flt = (price-avg)/avg;
+    tpDist = (avg*(1+cfg.takeProfitPct/100) - price)/price;
+    slDist = (price - avg*(1-cfg.stopLossPct/100))/price;
+    const isTp = flt >= cfg.takeProfitPct/100;
+    const isSl = flt <= -(cfg.stopLossPct/100);
+    if(isTp) act = "⚠️ 已达止盈线，执行止盈";
+    else if(isSl) act = "🚨 已达止损线，执行止损";
+    else if(cfg.trailEnabled && flt >= cfg.trailTriggerPct/100) act = "已进入移动止盈保护，回撤 "+(cfg.trailDrawdownPct)+"% 即止盈";
+    else act = b[1];
+  } else {
+    // 无持仓记录 → 展示模拟场景参考
+    const simAvg = cfg.startPrice;
+    flt = (price-simAvg)/simAvg;
+  }
+
+  $("d-band").textContent = b[0];
+  $("d-band").className = "d-value";
+  $("d-band").style.color = band==="boost" ? "var(--up)" : band==="pause" ? "var(--warn)" : "var(--down)";
+  $("d-flt").textContent = fmtPct(flt);
+  $("d-flt").style.color = flt>=0 ? "var(--up)" : "var(--down)";
+  $("d-tp").textContent = tpDist!=null ? fmtPct(tpDist) : "--";
+  $("d-sl").textContent = slDist!=null ? fmtPct(slDist) : "--";
+  $("d-trail").textContent = trailState;
+  $("d-trail").style.color = cfg.trailEnabled ? "var(--accent)" : "var(--muted)";
+  $("d-act").textContent = act;
+  $("d-act").style.color = "var(--gold)";
+
+  const banner = $("diag-banner");
+  banner.innerHTML = `<div class="${band==="pause"?"warn-banner":band==="boost"?"warn-banner":"ok-banner"}">
+    💰 当前价格 <b>¥${price.toFixed(2)}</b> · 处于 <b>${b[0]}</b>。
+    ${band==="pause" ? "建议本期暂停定投，等待价格回落至区间内再执行。" :
+      band==="boost" ? `建议本期投入 <b>¥${fmt(cfg.periodAmount*cfg.multiply,0)}</b>（加码 ×${cfg.multiply}）。` :
+      `建议本期投入 <b>¥${fmt(cfg.periodAmount,0)}</b>。`}
+    ${hold ? `当前持仓摊薄成本 ¥${(hold.cost/hold.shares).toFixed(2)}。` : ""}
+  </div>`;
+  DIAG = {price, band, flt};
+}
+function autoDiagnose(){
+  const q = QUOTE && QUOTE.price ? QUOTE.price : (RESULT ? RESULT.prices[RESULT.prices.length-1] : null);
+  if(q!=null){ $("diag-price").value = q.toFixed(2); diagnose(); }
+}
+function clearDiagnose(){
+  ["d-band","d-flt","d-tp","d-sl","d-trail","d-act"].forEach(id=>{$(id).textContent="--"; $(id).style.color="";});
+  $("diag-banner").innerHTML = "";
+}
+
+/* =====================================================================
+ * 行情获取（腾讯行情 API / 本地代理，GBK 解码）
+ * ===================================================================== */
+async function fetchQuoteFrom(url){
+  const resp = await fetch(url);
+  if(!resp.ok) throw new Error("HTTP " + resp.status);
+  const ct = resp.headers.get("content-type")||"";
+  if(ct.includes("json")){ return await resp.json(); }
+  const buf = await resp.arrayBuffer();
+  let text;
+  try{ text = new TextDecoder("gbk").decode(buf); }catch(e){ text = new TextDecoder("utf-8").decode(buf); }
+  const m = text.match(/"([^"]+)"/);
+  if(!m) throw new Error("行情响应格式异常");
+  const p = m[1].split("~");
+  if(p.length < 32) throw new Error("行情字段不足");
+  return {
+    ok:true,
+    name: p[1], code: p[2],
+    price: parseFloat(p[3]), prevClose: parseFloat(p[4]),
+    open: parseFloat(p[5]), high: parseFloat(p[33]), low: parseFloat(p[34]),
+    change: parseFloat(p[31]), changePct: parseFloat(p[32]),
+    time: p[30] || ""
+  };
+}
+async function refreshQuote(){
+  collectConfig();
+  const code = (CFG.code||"").trim();
+  if(!code){ toast("请先在配置中填写行情代码，如 sh600000"); return; }
+  const qEl=$("q-name"), pEl=$("q-price"), cEl=$("q-chg");
+  qEl.textContent = CFG.name + " · " + code;
+  pEl.textContent = "…";
+  cEl.textContent = "";
+  // 尝试 1：本地代理（CORS 友好）
+  try{
+    const j = await fetchQuoteFrom(CFG.proxyApi + "?code=" + encodeURIComponent(code));
+    if(j.ok){ applyQuote(j); return; }
+    throw new Error(j.error || "proxy failed");
+  }catch(e1){
+    // 尝试 2：腾讯直连
+    try{
+      const j = await fetchQuoteFrom(CFG.quoteApi + code);
+      if(j.ok){ applyQuote(j); return; }
+      throw new Error("直连解析失败");
+    }catch(e2){
+      pEl.textContent = "--"; cEl.textContent = "";
+      toast("行情获取失败（可能被浏览器跨域拦截）。请运行 quote_proxy.py 本地代理，或手动输入价格。");
+    }
+  }
+}
+function applyQuote(q){
+  QUOTE = q;
+  const chg = q.changePct;
+  $("q-name").textContent = q.name + " · " + q.code;
+  $("q-price").textContent = q.price.toFixed(2);
+  $("q-price").style.color = chg>=0 ? "var(--up)" : "var(--down)";
+  $("q-chg").textContent = (chg>=0?"+":"") + chg.toFixed(2) + "%";
+  $("q-chg").style.color = chg>=0 ? "var(--up)" : "var(--down)";
+  $("diag-price").value = q.price.toFixed(2);
+  diagnose();
+  toast("行情已更新：" + q.name + " " + q.price.toFixed(2));
+}
+function useQuotePrice(){
+  if(QUOTE && QUOTE.price){ $("diag-price").value = QUOTE.price.toFixed(2); diagnose(); }
+  else toast("暂无行情数据，请先点击「刷新」或手动输入价格");
+}
+
+/* =====================================================================
+ * 导出
+ * ===================================================================== */
+function exportCSV(){
+  if(!RESULT || !RESULT.trades.length){ toast("暂无交易记录可导出"); return; }
+  const head = "期数,类型,价格,金额,说明,复利池";
+  const rows = RESULT.trades.map((tr,i)=>{
+    const isBuy = tr.type==="BUY";
+    return [i+1, isBuy?"买入":"卖出", tr.price.toFixed(2), tr.amount.toFixed(2),
+      '"'+(tr.note||"").replace(/"/g,'""')+'"', CFG.reinvest?"是":"否"].join(",");
+  });
+  const csv = "\ufeff" + [head].concat(rows).join("\n");
+  const blob = new Blob([csv], {type:"text/csv;charset=utf-8"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "定投交易记录_" + new Date().toISOString().slice(0,10) + ".csv";
+  a.click();
+  URL.revokeObjectURL(a.href);
+  toast("已导出 CSV");
+}
+
+/* =====================================================================
+ * 初始化
+ * ===================================================================== */
+(function init(){
+  loadConfig();
+  fillForm();
+  renderPlan();
+  // 首次打开自动跑一次默认模拟，展示完整监控面板
+  runSim();
+})();
+</script>
+</body>
+</html>
